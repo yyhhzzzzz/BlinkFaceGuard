@@ -43,7 +43,7 @@ python -m venv .venv
 pip install -r requirements_app.txt
 ```
 
-## 准备模型
+## 准备模型(已提供基础模型)
 请将以下模型放到 `models/` 目录：
 - `face_landmarker.task`（MediaPipe Face Landmarker）
 - `yolo_face.pt`（YOLO 人脸检测权重）
