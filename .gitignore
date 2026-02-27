@@ -9,8 +9,4 @@ dist/
 out_blink_filter/
 input_photos/
 
-models/*.pt
-models/*.task
-!models/.gitkeep
-
 .DS_Store
