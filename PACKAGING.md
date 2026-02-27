@@ -8,7 +8,6 @@
 
 ### macOS
 ```bash
-cd /Users/yaoyihan/yyh_project/YoloFace
 bash build_mac.sh
 ```
 
