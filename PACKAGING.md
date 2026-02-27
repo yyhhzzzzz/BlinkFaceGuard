@@ -16,7 +16,6 @@ bash build_mac.sh
 
 ### Windows（PowerShell）
 ```powershell
-cd <你的项目目录>\YoloFace
 .\build_windows.ps1
 ```
 
