@@ -2,7 +2,6 @@ import os
 import cv2
 import math
 import argparse
-from types import SimpleNamespace
 import pandas as pd
 from tqdm import tqdm
 from ultralytics import YOLO
