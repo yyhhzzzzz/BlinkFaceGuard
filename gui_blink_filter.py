@@ -3,6 +3,43 @@ import os
 import sys
 from types import SimpleNamespace
 
+_DLL_DIR_HANDLES = []
+
+
+def _prepare_windows_torch_runtime():
+    if os.name != "nt":
+        return
+
+    # Avoid OpenMP duplicate runtime init failure in frozen builds.
+    os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
+
+    dll_dirs = []
+    if getattr(sys, "frozen", False):
+        meipass = getattr(sys, "_MEIPASS", "")
+        if meipass:
+            dll_dirs.append(os.path.join(meipass, "torch", "lib"))
+    else:
+        dll_dirs.append(
+            os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                ".venv",
+                "Lib",
+                "site-packages",
+                "torch",
+                "lib",
+            )
+        )
+
+    for dll_dir in dll_dirs:
+        if not os.path.isdir(dll_dir):
+            continue
+        os.environ["PATH"] = dll_dir + os.pathsep + os.environ.get("PATH", "")
+        if hasattr(os, "add_dll_directory"):
+            _DLL_DIR_HANDLES.append(os.add_dll_directory(dll_dir))
+
+
+_prepare_windows_torch_runtime()
+
 from blink_filter_yolo_tasks import run_pipeline
 
 try:

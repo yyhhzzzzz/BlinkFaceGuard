@@ -1,11 +1,39 @@
 import os
-import cv2
 import math
 import argparse
+import sys
 import pandas as pd
 from tqdm import tqdm
-from ultralytics import YOLO
-import mediapipe as mp
+
+_DLL_DIR_HANDLES = []
+
+
+def _prepare_windows_native_runtime():
+    if os.name != "nt":
+        return
+
+    # Avoid OpenMP duplicate runtime init failure in mixed native stacks.
+    os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
+
+    dll_dirs = []
+    meipass = getattr(sys, "_MEIPASS", "")
+    if meipass:
+        dll_dirs.append(os.path.join(meipass, "torch", "lib"))
+
+    exe_dir = os.path.dirname(getattr(sys, "executable", ""))
+    if exe_dir:
+        dll_dirs.append(os.path.join(exe_dir, "_internal", "torch", "lib"))
+        dll_dirs.append(os.path.join(exe_dir, "Lib", "site-packages", "torch", "lib"))
+
+    project_dir = os.path.dirname(os.path.abspath(__file__))
+    dll_dirs.append(os.path.join(project_dir, ".venv", "Lib", "site-packages", "torch", "lib"))
+
+    for dll_dir in dll_dirs:
+        if not dll_dir or not os.path.isdir(dll_dir):
+            continue
+        os.environ["PATH"] = dll_dir + os.pathsep + os.environ.get("PATH", "")
+        if hasattr(os, "add_dll_directory"):
+            _DLL_DIR_HANDLES.append(os.add_dll_directory(dll_dir))
 
 IMG_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".webp", ".tiff"}
 
@@ -68,6 +96,11 @@ def build_arg_parser():
 
 
 def run_pipeline(args, progress_cb=None, log_cb=print):
+    _prepare_windows_native_runtime()
+    # Delay heavy native imports to reduce startup-time DLL init conflicts.
+    from ultralytics import YOLO
+    import cv2
+    import mediapipe as mp
 
     if not os.path.exists(args.mp_model_path):
         raise FileNotFoundError(f"找不到 mediapipe 模型文件: {args.mp_model_path}")
@@ -108,7 +141,9 @@ def run_pipeline(args, progress_cb=None, log_cb=print):
 
     with FaceLandmarker.create_from_options(mp_options) as landmarker:
         total = len(img_paths)
-        for idx, p in enumerate(tqdm(img_paths, desc="Processing"), start=1):
+        use_tqdm = (progress_cb is None) and (getattr(sys, "stderr", None) is not None)
+        iterable = tqdm(img_paths, desc="Processing") if use_tqdm else img_paths
+        for idx, p in enumerate(iterable, start=1):
             if progress_cb:
                 progress_cb(idx - 1, total)
             bgr0 = cv2.imread(p)
